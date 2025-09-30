@@ -42,7 +42,7 @@ export class AuthService {
     });
 
     const tokens = await this.generateTokens(user);
-    return { message: 'Đăng ký thành công', user, ...tokens };
+    return { user, ...tokens };
   }
 
   async login(loginDto: LoginDto) {
@@ -56,7 +56,7 @@ export class AuthService {
     if (!isPasswordValid) throw new UnauthorizedException('Sai mật khẩu');
 
     const tokens = await this.generateTokens(user);
-    return { message: 'Đăng nhập thành công', user, ...tokens };
+    return { user, ...tokens };
   }
 
   async refresh(userId: number, refreshToken: string) {
