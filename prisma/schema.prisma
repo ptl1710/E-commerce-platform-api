@@ -15,14 +15,17 @@ datasource db {
 }
 
 model User {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
-  name      String?
-  password  String
-  phone     String?
-  roles     String    @default("user")
-  address   String?   
-  deleted   Boolean   @default(false)
-  createdAt DateTime? @default(now())
-  updatedAt DateTime? @updatedAt
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  name         String?
+  password     String
+  roles        String    @default("user")   
+  phone        String?
+  address      String?
+  refreshToken String?
+  createdAt    DateTime  @default(now())    
+  updatedAt    DateTime  @updatedAt         
+  deleted      Boolean   @default(false)
 }
+
+

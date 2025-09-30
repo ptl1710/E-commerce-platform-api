@@ -1,125 +1,67 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
-import { PrismaService } from "src/prisma/prisma.service";
-import * as bcrypt from 'bcrypt';
-import { formatResponse } from "src/utils/response";
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UserEntity } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
     constructor(private prisma: PrismaService) { }
 
-    async create(user: { email: string; password: string; name: string }) {
-        if (!user.email || !user.password || !user.name) {
-            throw new BadRequestException('Thiếu thông tin bắt buộc: email, password, name');
-        }
-        if (user.password.length < 6) {
-            throw new BadRequestException('Mật khẩu phải có ít nhất 6 ký tự');
-        }
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) {
-            throw new BadRequestException('Email không hợp lệ');
-        }
-        if (await this.prisma.user.findUnique({ where: { email: user.email } })) {
-            throw new BadRequestException('Email đã được sử dụng');
-        }
-
-        const newUser = await this.prisma.user.create({
+    async create(createUserDto: CreateUserDto): Promise<UserEntity> {
+        const user = await this.prisma.user.create({
             data: {
-                ...user,
-                password: await bcrypt.hash(user.password, 10),
-                createdAt: new Date(),
+                ...createUserDto,
             },
-            select: {
-                id: true,
-                email: true,
-                name: true,
-                password: true,
-                roles: true,
-                phone: true,
-                address: true,
-                createdAt: true,
-                updatedAt: true,
-            }
         });
-        return formatResponse(newUser, 'User created successfully');
+        return new UserEntity(user);
     }
 
-    async getAllUsers() {
-        const listUsers = await this.prisma.user.findMany({
-            where: { deleted: false },
-            select: {
-                id: true,
-                email: true,
-                name: true,
-                // password: true,
-                roles: true,
-                phone: true,
-                address: true,
-                createdAt: true,
-                updatedAt: true,
-            }
-        });
-        return formatResponse(listUsers, 'Lấy danh sách user thành công');
+    async findAll(): Promise<UserEntity[]> {
+        const users = await this.prisma.user.findMany();
+        return users.map((u) => new UserEntity(u));
     }
 
-    async getDetailUser(id?: number) {
-        if (!id) {
-            throw new BadRequestException('Id là bắt buộc');
-        }
-        let where: any = {};
-        if (id) where.id = parseInt(id.toString());
+    async findOne(id: number): Promise<UserEntity> {
+        const user = await this.prisma.user.findUnique({ where: { id } });
 
-        const detailUser = await this.prisma.user.findFirst({
-            where,
-            select: {
-                id: true,
-                email: true,
-                name: true,
-                // password: true,
-                roles: true,
-                phone: true,
-                address: true,
-                createdAt: true,
-                updatedAt: true,
-            }
-        });
-
-        if (!detailUser) {
-            throw new BadRequestException('Không tìm thấy user');
+        if (!user) {
+            throw new Error('User not found');
         }
 
-        return formatResponse(detailUser, 'Lấy chi tiết user thành công');
+        return new UserEntity(user);
     }
 
-    async getUserByEmail(email: string) {
-        if (!email) {
-            throw new Error('Email là bắt buộc');
-        }
-        return this.prisma.user.findUnique({
-            where: { email },
-            select: {
-                id: true,
-                email: true,
-                name: true,
-                password: true,
-                roles: true,
-                phone: true,
-                address: true,
-                createdAt: true,
-                updatedAt: true,
-            }
-        })
-    }
-
-    async deleteUser(id?: number) {
-        if (!id) {
-            throw new Error('Id là bắt buộc');
-        }
-        let where: any = {};
-        if (id) where.id = id;
+    async update(id: number, updateUserDto: UpdateUserDto): Promise<UserEntity> {
         const user = await this.prisma.user.update({
             where: { id },
-            data: { deleted: true, updatedAt: new Date() },
+            data: updateUserDto,
         });
+        return new UserEntity(user);
+    }
 
-        return formatResponse(user, 'Xoá user thành công');
+    async updateRefreshToken(userId: number, refreshToken: string) {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { refreshToken: refreshToken },
+        });
+    }
+
+    async remove(id: number): Promise<UserEntity> {
+        const user = await this.prisma.user.update({
+            where: { id },
+            data: { deleted: true },
+        });
+        return new UserEntity(user);
+    }
+
+    async findByEmail(email: string): Promise<UserEntity> {
+        const user = await this.prisma.user.findUnique({ where: { email } });
+
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        return new UserEntity(user);
     }
 }

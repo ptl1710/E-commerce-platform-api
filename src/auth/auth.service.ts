@@ -1,61 +1,70 @@
-// auth.service.ts
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { use } from 'passport';
-import { UsersService } from 'src/users/users.service';
-import { formatResponse } from 'src/utils/response';
+import { UsersService } from '../users/users.service';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
-    constructor(
-        private usersService: UsersService,
-        private jwtService: JwtService
-    ) { }
+  constructor(
+    private usersService: UsersService,
+    private jwtService: JwtService,
+  ) { }
 
-    async register(email: string, password: string, name: string) {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        return this.usersService.create({ email, password: hashedPassword, name });
-    }
+  private async generateTokens(user: any) {
+    const payload = { sub: user.id, email: user.email, role: user.roles };
 
-    async login(email: string, password: string) {
+    const accessToken = this.jwtService.sign(payload, {
+      secret: process.env.JWT_SECRET || 'secretKey',
+      expiresIn: '15m', // access token ngắn hạn
+    });
 
-        const user = await this.usersService.getUserByEmail(email);
-        if (!user) throw new UnauthorizedException('Email không tồn tại');
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: process.env.JWT_REFRESH_SECRET || 'refreshSecret',
+      expiresIn: '7d', // refresh token dài hạn
+    });
 
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) throw new UnauthorizedException('Sai mật khẩu');
+    // Lưu refresh token (hash để bảo mật hơn)
+    const hashedRefresh = await bcrypt.hash(refreshToken, 10);
+    await this.usersService.updateRefreshToken(user.id, hashedRefresh);
 
-        const payload = { sub: user.id, email: user.email };
-        console.log({ user });
+    return { accessToken, refreshToken };
+  }
 
-        return formatResponse({
-            access_token: this.jwtService.sign(payload, { expiresIn: '15m' }),
-            refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
-            user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                roles: user.roles,
-                phone: user.phone,
-                address: user.address,
-                createdAt: user.createdAt,
-                updatedAt: user.updatedAt,
-            }
-        }, 'Đăng nhập thành công');
-    }
+  async register(registerDto: RegisterDto) {
+    const hashedPassword = await bcrypt.hash(registerDto.password, 10);
+    const user = await this.usersService.create({
+      ...registerDto,
+      password: hashedPassword,
+    });
 
-    async refreshToken(refreshToken: string) {
-        try {
-            const payload = this.jwtService.verify(refreshToken, { secret: 'MY_SECRET_KEY' });
-            const newAccessToken = this.jwtService.sign(
-                { sub: payload.sub, email: payload.email },
-                { expiresIn: '15m' }
-            );
-            return { access_token: newAccessToken };
-        } catch (e) {
-            throw new UnauthorizedException('Refresh token không hợp lệ');
-        }
-    }
+    const tokens = await this.generateTokens(user);
+    return { message: 'Đăng ký thành công', user, ...tokens };
+  }
 
+  async login(loginDto: LoginDto) {
+    const user = await this.usersService.findByEmail(loginDto.email);
+    if (!user) throw new UnauthorizedException('Email không tồn tại');
+
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      (user as any).password,
+    );
+    if (!isPasswordValid) throw new UnauthorizedException('Sai mật khẩu');
+
+    const tokens = await this.generateTokens(user);
+    return { message: 'Đăng nhập thành công', user, ...tokens };
+  }
+
+  async refresh(userId: number, refreshToken: string) {
+    const user = await this.usersService.findOne(userId);
+    if (!user || !user.refreshToken)
+      throw new ForbiddenException('Không có quyền');
+
+    const isMatch = await bcrypt.compare(refreshToken, user.refreshToken);
+    if (!isMatch) throw new ForbiddenException('Refresh token không hợp lệ');
+
+    return this.generateTokens(user);
+  }
 }
