@@ -24,7 +24,7 @@ model User {
   address      String?
   refreshToken String?
   createdAt    DateTime  @default(now())    
-  updatedAt    DateTime  @updatedAt         
+  updatedAt    DateTime?  @updatedAt         
   deleted      Boolean   @default(false)
 }
 

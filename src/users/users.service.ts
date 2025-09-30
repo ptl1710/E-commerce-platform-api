@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -9,6 +9,13 @@ export class UsersService {
     constructor(private prisma: PrismaService) { }
 
     async create(createUserDto: CreateUserDto): Promise<UserEntity> {
+        const existingUser = await this.prisma.user.findUnique({
+            where: { email: createUserDto.email },
+        });
+        if (existingUser) {
+            throw new BadRequestException('Email already exists');
+        }
+
         const user = await this.prisma.user.create({
             data: {
                 ...createUserDto,
@@ -19,32 +26,32 @@ export class UsersService {
 
     async findAll(): Promise<UserEntity[]> {
         const users = await this.prisma.user.findMany();
-        return users.map((u) => new UserEntity(u));
+        return users.map((u: any) => new UserEntity(u));
     }
 
     async findOne(id: number): Promise<UserEntity> {
         const user = await this.prisma.user.findUnique({ where: { id } });
 
         if (!user) {
-            throw new Error('User not found');
+            throw new BadRequestException('User not found');
         }
 
         return new UserEntity(user);
     }
 
     async update(id: number, updateUserDto: UpdateUserDto): Promise<UserEntity> {
+        if (!id) throw new BadRequestException('Id is required');
+
+        console.log({ id, updateUserDto });
+
         const user = await this.prisma.user.update({
             where: { id },
-            data: updateUserDto,
+            data: {
+                ...updateUserDto,
+                updatedAt: new Date(),
+            },
         });
         return new UserEntity(user);
-    }
-
-    async updateRefreshToken(userId: number, refreshToken: string) {
-        return this.prisma.user.update({
-            where: { id: userId },
-            data: { refreshToken: refreshToken },
-        });
     }
 
     async remove(id: number): Promise<UserEntity> {
@@ -59,7 +66,7 @@ export class UsersService {
         const user = await this.prisma.user.findUnique({ where: { email } });
 
         if (!user) {
-            throw new Error('User not found');
+            throw new BadRequestException('User not found');
         }
 
         return new UserEntity(user);

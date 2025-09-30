@@ -4,6 +4,8 @@ import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ApiResponse, AuthResponse } from 'src/interface/InterfaceResponse';
+import { formatResponse } from 'src/utils/response';
 
 @Injectable()
 export class AuthService {
@@ -27,7 +29,7 @@ export class AuthService {
 
     // Lưu refresh token (hash để bảo mật hơn)
     const hashedRefresh = await bcrypt.hash(refreshToken, 10);
-    await this.usersService.updateRefreshToken(user.id, hashedRefresh);
+    await this.usersService.update(user.id, { refreshToken: hashedRefresh });
 
     return { accessToken, refreshToken };
   }
@@ -65,6 +67,7 @@ export class AuthService {
     const isMatch = await bcrypt.compare(refreshToken, user.refreshToken);
     if (!isMatch) throw new ForbiddenException('Refresh token không hợp lệ');
 
-    return this.generateTokens(user);
+    const tokens = await this.generateTokens(user);
+    return { user, ...tokens };
   }
 }
