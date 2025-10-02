@@ -4,6 +4,7 @@
 /build
 .env
 /generated
+/prisma/migrations
 
 
 # Logs
