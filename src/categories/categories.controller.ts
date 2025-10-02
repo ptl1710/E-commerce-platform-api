@@ -3,6 +3,7 @@ import { ApiResponse } from "src/interface/InterfaceResponse";
 import { CategoriesEntity } from "./entities/categories.entitis";
 import { CategoriesService } from "./categories.service";
 import { formatResponse } from "src/utils/response";
+import { CreateCategoriesDto } from "src/Dto/Categories/create-categories.dto";
 
 @Controller('categories')
 export class CategoriesController {
@@ -22,7 +23,7 @@ export class CategoriesController {
     }
 
     @Post()
-    async create(@Body() createDto: any): Promise<ApiResponse<CategoriesEntity>> {
+    async create(@Body() createDto: CreateCategoriesDto): Promise<ApiResponse<CategoriesEntity>> {
         const category = await this.categoriesService.create(createDto);
         return formatResponse(category, 'Create category successfully');
     }
