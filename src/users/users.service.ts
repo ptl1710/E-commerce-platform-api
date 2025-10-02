@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserEntity } from './entities/user.entity';
-
+import * as bcrypt from 'bcrypt';
 @Injectable()
 export class UsersService {
     constructor(private prisma: PrismaService) { }
@@ -19,6 +19,7 @@ export class UsersService {
         const user = await this.prisma.user.create({
             data: {
                 ...createUserDto,
+                password: bcrypt.hashSync(createUserDto.password, 10),
             },
         });
         return new UserEntity(user);
@@ -42,8 +43,6 @@ export class UsersService {
     async update(id: number, updateUserDto: UpdateUserDto): Promise<UserEntity> {
         if (!id) throw new BadRequestException('Id is required');
 
-        console.log({ id, updateUserDto });
-
         const user = await this.prisma.user.update({
             where: { id },
             data: {
@@ -62,13 +61,23 @@ export class UsersService {
         return new UserEntity(user);
     }
 
-    async findByEmail(email: string): Promise<UserEntity> {
-        const user = await this.prisma.user.findUnique({ where: { email } });
+    async findByEmail(email: string) {
+        const user = await this.prisma.user.findUnique({
+            where: { email },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                password: true,
+                roles: true,
+                refreshToken: true
+            }
+        });
 
         if (!user) {
             throw new BadRequestException('User not found');
         }
 
-        return new UserEntity(user);
+        return user;
     }
 }

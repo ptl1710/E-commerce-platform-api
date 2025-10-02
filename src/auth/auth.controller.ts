@@ -4,7 +4,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ApiResponse, AuthResponse } from 'src/interface/InterfaceResponse';
 import { formatResponse } from 'src/utils/response';
-import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { UserEntity } from 'src/users/entities/user.entity';
 
 @Controller('auth')
 export class AuthController {
@@ -19,7 +19,8 @@ export class AuthController {
   @Post('login')
   async login(@Body() loginDto: LoginDto): Promise<ApiResponse<AuthResponse>> {
     const { user, ...tokens } = await this.authService.login(loginDto);
-    return formatResponse({ user, ...tokens }, 'Đăng nhập thành công');
+    const safeUser = new UserEntity(user);
+    return formatResponse({ user: safeUser, ...tokens }, 'Đăng nhập thành công');
   }
 
   @Post('refresh')
