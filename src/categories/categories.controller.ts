@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, Post, Put } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from "@nestjs/common";
 import { ApiResponse } from "src/interface/InterfaceResponse";
 import { CategoriesEntity } from "./entities/categories.entitis";
 import { CategoriesService } from "./categories.service";
 import { formatResponse } from "src/utils/response";
 import { CreateCategoriesDto } from "src/Dto/Categories/create-categories.dto";
+import { UpdateCategoriesDto } from "src/Dto/Categories/update-categories.dto";
 
 @Controller('categories')
 export class CategoriesController {
@@ -17,8 +18,8 @@ export class CategoriesController {
     }
 
     @Get(':id')
-    async getDetail(@Body('id') id: number): Promise<ApiResponse<CategoriesEntity>> {
-        const category = await this.categoriesService.findOne(id);
+    async getDetail(@Param('id') id: string): Promise<ApiResponse<CategoriesEntity>> {
+        const category = await this.categoriesService.findOne(parseInt(id));
         return formatResponse(category, 'Get detail successfully');
     }
 
@@ -29,14 +30,17 @@ export class CategoriesController {
     }
 
     @Put(':id')
-    async update(@Body() updateDto: any): Promise<ApiResponse<CategoriesEntity>> {
-        const category = await this.categoriesService.update(updateDto, updateDto.id);
+    async update(
+        @Param('id') id: string,
+        @Body() updateDto: UpdateCategoriesDto
+    ): Promise<ApiResponse<CategoriesEntity>> {
+        const category = await this.categoriesService.update(parseInt(id), updateDto);
         return formatResponse(category, 'Update category successfully');
     }
 
     @Delete(':id')
-    async remove(@Body('id') id: number): Promise<ApiResponse<CategoriesEntity>> {
-        const category = await this.categoriesService.remove(id);
+    async remove(@Param('id') id: string): Promise<ApiResponse<CategoriesEntity>> {
+        const category = await this.categoriesService.remove(parseInt(id));
         return formatResponse(category, 'Delete category successfully');
     }
 }

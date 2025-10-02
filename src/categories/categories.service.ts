@@ -34,18 +34,19 @@ export class CategoriesService {
     async create(createDto: CreateCategoriesDto): Promise<CategoriesEntity> {
         const category = await this.prisma.categories.create({
             data: {
-                ...createDto
+                ...createDto,
             }
         });
         return new CategoriesEntity(category);
     }
 
-    async update(updateDto: CreateCategoriesDto, id: number): Promise<CategoriesEntity> {
+    async update(id: number, updateDto: CreateCategoriesDto,): Promise<CategoriesEntity> {
         if (!id) throw new BadRequestException('Id is required');
         const category = await this.prisma.categories.update({
             where: { id },
             data: {
-                ...updateDto
+                ...updateDto,
+                updatedAt: new Date()
             }
         });
         return new CategoriesEntity(category);

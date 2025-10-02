@@ -10,10 +10,10 @@ datasource db {
 model categories {
   id          Int       @id @default(autoincrement())
   name        String    @unique(map: "Categories_name_key")
-  imageIcon   String
+  imageIcon   String?
   description String?
   createdAt   DateTime  @default(now())
-  updatedAt   DateTime?
+  updatedAt   DateTime? @updatedAt
   deleted     Boolean   @default(false)
   product     product[]
 }
