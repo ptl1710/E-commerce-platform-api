@@ -6,7 +6,7 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
+  output   = "../generated/prisma/client"
 }
 
 datasource db {
@@ -14,17 +14,148 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
+model categories {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique(map: "Categories_name_key")
+  imageIcon   String
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime
+  deleted     Boolean   @default(false)
+  product     product[]
+}
+
+model order {
+  id              Int                 @id @default(autoincrement())
+  userId          Int
+  status          order_status        @default(PENDING)
+  total           Decimal             @db.Decimal(10, 2)
+  shippingAddress String
+  phone           String
+  paymentMethod   String?
+  paymentStatus   order_paymentStatus @default(PENDING)
+  createdAt       DateTime            @default(now())
+  user            user                @relation(fields: [userId], references: [id], map: "Order_userId_fkey")
+  orderitem       orderitem[]
+
+  @@index([userId], map: "Order_userId_fkey")
+}
+
+model orderitem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+  order     order   @relation(fields: [orderId], references: [id], map: "OrderItem_orderId_fkey")
+  product   product @relation(fields: [productId], references: [id], map: "OrderItem_productId_fkey")
+
+  @@index([orderId], map: "OrderItem_orderId_fkey")
+  @@index([productId], map: "OrderItem_productId_fkey")
+}
+
+model product {
+  id            Int            @id @default(autoincrement())
+  sku           String         @unique(map: "Product_sku_key")
+  name          String
+  brand         String?
+  imageUrl      String?
+  description   String?
+  price         Decimal        @db.Decimal(10, 2)
+  discount      Int?
+  quantity      Int            @default(0)
+  weight        Float?
+  width         Float?
+  height        Float?
+  depth         Float?
+  isFeatured    Boolean        @default(false)
+  averageRating Float?         @default(0)
+  status        product_status @default(ACTIVE)
+  categoryId    Int
+  sellerId      Int
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime
+  deleted       Boolean        @default(false)
+  orderitem     orderitem[]
+  categories    categories     @relation(fields: [categoryId], references: [id], map: "Product_categoryId_fkey")
+  user          user           @relation(fields: [sellerId], references: [id], map: "Product_sellerId_fkey")
+  producttag    producttag[]
+  review        review[]
+
+  @@index([categoryId], map: "Product_categoryId_fkey")
+  @@index([sellerId], map: "Product_sellerId_fkey")
+}
+
+model producttag {
+  productId Int
+  tagId     Int
+  product   product @relation(fields: [productId], references: [id], map: "ProductTag_productId_fkey")
+  tag       tag     @relation(fields: [tagId], references: [id], map: "ProductTag_tagId_fkey")
+
+  @@id([productId, tagId])
+  @@index([tagId], map: "ProductTag_tagId_fkey")
+}
+
+model review {
+  id        Int      @id @default(autoincrement())
+  rating    Int      @db.TinyInt
+  comment   String?
+  userId    Int
+  productId Int
+  createdAt DateTime @default(now())
+  product   product  @relation(fields: [productId], references: [id], map: "Review_productId_fkey")
+  user      user     @relation(fields: [userId], references: [id], map: "Review_userId_fkey")
+
+  @@index([productId], map: "Review_productId_fkey")
+  @@index([userId], map: "Review_userId_fkey")
+}
+
+model tag {
+  id         Int          @id @default(autoincrement())
+  name       String       @unique(map: "Tag_name_key")
+  producttag producttag[]
+}
+
+model user {
   id           Int       @id @default(autoincrement())
-  email        String    @unique
+  email        String    @unique(map: "User_email_key")
   name         String?
   password     String
-  roles        String    @default("user")   
+  role         user_role @default(USER)
   phone        String?
   address      String?
   refreshToken String?
-  createdAt    DateTime  @default(now())    
-  updatedAt    DateTime?  @updatedAt         
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime?
   deleted      Boolean   @default(false)
+  order        order[]
+  product      product[]
+  review       review[]
 }
 
+enum order_status {
+  PENDING
+  PAID
+  SHIPPED
+  COMPLETED
+  CANCELLED
+}
+
+enum user_role {
+  USER
+  SELLER
+  ADMIN
+}
+
+enum order_paymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum product_status {
+  ACTIVE
+  INACTIVE
+  OUT_OF_STOCK
+}

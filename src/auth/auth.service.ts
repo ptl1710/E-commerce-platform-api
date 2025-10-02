@@ -2,18 +2,20 @@ import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/c
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from '../Dto/Auth/register.dto';
+import { LoginDto } from '../Dto/Auth/login.dto';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class AuthService {
   constructor(
+    private prisma: PrismaService,
     private usersService: UsersService,
     private jwtService: JwtService,
   ) { }
 
   private async generateTokens(user: any) {
-    const payload = { sub: user.id, email: user.email, role: user.roles };
+    const payload = { sub: user.id, email: user.email, role: user.role };
 
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_SECRET || 'secretKey',
@@ -34,9 +36,19 @@ export class AuthService {
 
   async register(registerDto: RegisterDto) {
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
-    const user = await this.usersService.create({
-      ...registerDto,
-      password: hashedPassword,
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: registerDto.email },
+    });
+
+    if (existingUser) {
+      throw new UnauthorizedException('Email đã tồn tại');
+    }
+
+    const user = await this.prisma.user.create({
+      data: {
+        ...registerDto,
+        password: hashedPassword,
+      },
     });
 
     const tokens = await this.generateTokens(user);

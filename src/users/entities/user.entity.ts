@@ -2,7 +2,7 @@ export class UserEntity {
   id: number;
   email: string;
   name?: string | null;
-  roles: string;                 // default: "user"
+  role: string;                 // default: "user"
   phone?: string | null;
   address?: string | null;
   refreshToken?: string | null;

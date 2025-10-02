@@ -1,37 +1,20 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateUserDto } from '../Dto/User/update-user.dto';
 import { UserEntity } from './entities/user.entity';
-import * as bcrypt from 'bcrypt';
 @Injectable()
 export class UsersService {
     constructor(private prisma: PrismaService) { }
 
-    async create(createUserDto: CreateUserDto): Promise<UserEntity> {
-        const existingUser = await this.prisma.user.findUnique({
-            where: { email: createUserDto.email },
-        });
-        if (existingUser) {
-            throw new BadRequestException('Email already exists');
-        }
-
-        const user = await this.prisma.user.create({
-            data: {
-                ...createUserDto,
-                password: bcrypt.hashSync(createUserDto.password, 10),
-            },
-        });
-        return new UserEntity(user);
-    }
-
     async findAll(): Promise<UserEntity[]> {
-        const users = await this.prisma.user.findMany();
+        const users = await this.prisma.user.findMany({
+            where: { deleted: false },
+        });
         return users.map((u: any) => new UserEntity(u));
     }
 
     async findOne(id: number): Promise<UserEntity> {
-        const user = await this.prisma.user.findUnique({ where: { id } });
+        const user = await this.prisma.user.findUnique({ where: { id, deleted: false } });
 
         if (!user) {
             throw new BadRequestException('User not found');
@@ -69,8 +52,7 @@ export class UsersService {
                 email: true,
                 name: true,
                 password: true,
-                roles: true,
-                refreshToken: true
+                role: true
             }
         });
 

@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Param, Delete, BadGatewayException, Put, Patch } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateUserDto } from '../Dto/User/create-user.dto';
+import { UpdateUserDto } from '../Dto/User/update-user.dto';
 import { ApiResponse } from 'src/interface/InterfaceResponse';
 import { UserEntity } from './entities/user.entity';
 import { formatResponse } from 'src/utils/response';
@@ -9,12 +9,6 @@ import { formatResponse } from 'src/utils/response';
 @Controller('users')
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
-
-    @Post()
-    async create(@Body() createUserDto: CreateUserDto): Promise<ApiResponse<UserEntity>> {
-        const user = await this.usersService.create(createUserDto);
-        return formatResponse(user, 'User created successfully');
-    }
 
     @Get()
     async findAll(): Promise<ApiResponse<UserEntity[]>> {

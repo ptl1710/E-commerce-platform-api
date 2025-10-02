@@ -1,7 +1,7 @@
 import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from '../Dto/Auth/register.dto';
+import { LoginDto } from '../Dto/Auth/login.dto';
 import { ApiResponse, AuthResponse } from 'src/interface/InterfaceResponse';
 import { formatResponse } from 'src/utils/response';
 import { UserEntity } from 'src/users/entities/user.entity';
@@ -13,14 +13,13 @@ export class AuthController {
   @Post('register')
   async register(@Body() registerDto: RegisterDto): Promise<ApiResponse<AuthResponse>> {
     const { user, ...tokens } = await this.authService.register(registerDto);
-    return formatResponse({ user, ...tokens }, 'Đăng ký thành công');
+    return formatResponse({ user: new UserEntity(user), ...tokens }, 'Đăng ký thành công');
   }
 
   @Post('login')
   async login(@Body() loginDto: LoginDto): Promise<ApiResponse<AuthResponse>> {
     const { user, ...tokens } = await this.authService.login(loginDto);
-    const safeUser = new UserEntity(user);
-    return formatResponse({ user: safeUser, ...tokens }, 'Đăng nhập thành công');
+    return formatResponse({ user: new UserEntity(user), ...tokens }, 'Đăng nhập thành công');
   }
 
   @Post('refresh')
